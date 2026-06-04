@@ -14,3 +14,5 @@ logs*/
 **/build/
 .venv
 .idea/
+.env
+*.config.json

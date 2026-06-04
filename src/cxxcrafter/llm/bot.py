@@ -2,7 +2,13 @@ import openai
 import tiktoken
 
 try:
-    from cxxcrafter.config import LLM_MODEL, LLM_API_KEY, LLM_BASE_URL
+    from cxxcrafter.config import (
+        LLM_MODEL,
+        LLM_API_KEY,
+        LLM_BASE_URL,
+        LLM_REASONING_EFFORT,
+        LLM_THINKING_ENABLED,
+    )
 except Exception as e:
     raise e
 
@@ -53,12 +59,25 @@ class GPTBot:
         self.input_token_count = 0
         self.output_token_count = 0
 
+    def _completion_options(self):
+        options = {}
+        if LLM_THINKING_ENABLED is not None:
+            options["extra_body"] = {
+                "thinking": {
+                    "type": "enabled" if LLM_THINKING_ENABLED else "disabled"
+                }
+            }
+            if LLM_THINKING_ENABLED:
+                options["reasoning_effort"] = LLM_REASONING_EFFORT
+        return options
+
     @token_count_decorator
     def inference(self, message=''):
         self.messages.append({"role": "user", "content": message})
         response = self.client.chat.completions.create(
             model=self.model,
-            messages=self.messages
+            messages=self.messages,
+            **self._completion_options()
         )
         content = response.choices[0].message.content
         global sdk_global_input_token_count
@@ -77,7 +96,8 @@ class GPTBot:
             total_length = self.calculate_total_length(self.messages)
         response = self.client.chat.completions.create(
             model=self.model,
-            messages=self.messages
+            messages=self.messages,
+            **self._completion_options()
         )
         content = response.choices[0].message.content
         global sdk_global_input_token_count

@@ -28,7 +28,16 @@
      cd CXXCrafter-Community-Edition 
      pip install .
      ```
-   - Configure LLM service (i.e., model, base url, and API key) in the [config](src/cxxcrafter/config.py) file or through environment variables.
+   - Configure LLM service (i.e., model, base url, and API key) with an external config file or environment variables. Do not commit real API keys.
+     ```bash
+     mkdir -p ~/.cxxcrafter
+     cp cxxcrafter.config.example.json ~/.cxxcrafter/config.json
+     # Edit ~/.cxxcrafter/config.json and fill in your API key.
+     ```
+     You can also point CXXCrafter to another config file:
+     ```bash
+     export CXXCRAFTER_CONFIG=/path/to/cxxcrafter.config.json
+     ```
    - Start `Docker daemon` on your machine.
 
 ## Usage Example

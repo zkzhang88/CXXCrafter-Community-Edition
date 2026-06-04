@@ -1,0 +1,8 @@
+{
+  "llm_model": "deepseek-v4-pro",
+  "api_key": "replace-with-your-api-key",
+  "base_url": "https://api.deepseek.com",
+  "deepseek_thinking_enabled": true,
+  "deepseek_reasoning_effort": "high",
+  "mp_pool_size": 10
+}
