@@ -2,7 +2,7 @@ import json
 import os
 
 
-DEFAULT_CONFIG_PATH = "~/.cxxcrafter/config.json"
+DEFAULT_CONFIG_PATH = "~/exps/CXXCrafter-Community-Edition/cxxcrafter.config.json"
 CONFIG_PATH = os.path.expanduser(os.getenv("CXXCRAFTER_CONFIG", DEFAULT_CONFIG_PATH))
 
 CONFIG_DEFAULTS = {
