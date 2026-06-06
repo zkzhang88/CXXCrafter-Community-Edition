@@ -37,6 +37,7 @@
      ```bash
      export CXXCRAFTER_CONFIG=/path/to/cxxcrafter.config.json
      ```
+     `max_retry_times` controls the maximum Dockerfile repair attempts. It defaults to `10` and can be overridden with `CXXCRAFTER_MAX_RETRY_TIMES`.
    - Start `Docker daemon` on your machine.
 
 ## Usage Example

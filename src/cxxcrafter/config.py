@@ -12,6 +12,7 @@ CONFIG_DEFAULTS = {
     "deepseek_thinking_enabled": True,
     "deepseek_reasoning_effort": "high",
     "mp_pool_size": 10,
+    "max_retry_times": 10,
 }
 
 
@@ -63,6 +64,10 @@ CONFIG_DEEPSEEK_REASONING_EFFORT = (
 )
 
 MP_POOL_SIZE = int(os.getenv("CXXCRAFTER_MP_POOL_SIZE", _config_value("mp_pool_size")))
+MAX_RETRY_TIMES = int(os.getenv("CXXCRAFTER_MAX_RETRY_TIMES", _config_value("max_retry_times")))
+
+if MAX_RETRY_TIMES < 1:
+    raise ValueError("max_retry_times must be greater than 0.")
 
 
 # === Automatic Check ===

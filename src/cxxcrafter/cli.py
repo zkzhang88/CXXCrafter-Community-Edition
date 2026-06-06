@@ -8,7 +8,7 @@ from cxxcrafter.parsing_module import parser
 from cxxcrafter.execution_module import executor
 from cxxcrafter.init import get_log_dir, get_playground_dir, get_solution_base_dir
 from cxxcrafter.llm.bot import get_sdk_token_counts
-
+from cxxcrafter.config import MAX_RETRY_TIMES
 
 
 class CXXCrafter:
@@ -84,8 +84,8 @@ class CXXCrafter:
             if not flag_success:
                 self.logger.error(f"Execution failed with error: {error_message}")
                 log_the_error_message(error_message, self.flag_version, self.history_dir)
-                if self.flag_version >= 10:
-                    self.logger.info("\nTry over 10 times")
+                if self.flag_version >= MAX_RETRY_TIMES:
+                    self.logger.info(f"\nTry over {MAX_RETRY_TIMES} times")
                     return self.project_name, flag_success
                 self.modify_dockerfile(error_message)
             else:

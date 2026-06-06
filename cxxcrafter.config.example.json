@@ -4,5 +4,6 @@
   "base_url": "https://api.deepseek.com",
   "deepseek_thinking_enabled": true,
   "deepseek_reasoning_effort": "high",
-  "mp_pool_size": 10
+  "mp_pool_size": 10,
+  "max_retry_times": 20
 }
