@@ -22,3 +22,4 @@ def get_solution_base_dir() -> str:
 def ensure_all_directories_exist():
     get_log_dir()
     get_playground_dir()
+    get_solution_base_dir()

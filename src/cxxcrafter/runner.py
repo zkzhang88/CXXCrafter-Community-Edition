@@ -1,0 +1,22 @@
+import os
+import multiprocessing as mp
+
+from cxxcrafter import CXXCrafter
+from cxxcrafter.config import MP_POOL_SIZE
+from cxxcrafter.init import get_solution_base_dir
+
+
+def build_one_repo(repo_path):
+    cxxcrafter = CXXCrafter(repo_path)
+    project_name, flag = cxxcrafter.run()
+
+
+def run_with_file_list(file_path):
+    with open(file_path, "r") as f:
+        lines = f.readlines()
+    repos = [line.strip() for line in lines if line.strip()]
+    built_repos = os.listdir(get_solution_base_dir())
+    repos = [item for item in repos if os.path.basename(item) not in built_repos]
+    pool_size = MP_POOL_SIZE if isinstance(MP_POOL_SIZE, int) else 10
+    with mp.Pool(processes=pool_size) as pool:
+        pool.map(build_one_repo, reversed(repos))
