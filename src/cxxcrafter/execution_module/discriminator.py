@@ -1,7 +1,33 @@
 from cxxcrafter.llm.bot import GPTBot
 from .utils import extract_json_content, remove_ansi_escape_sequences
+import ast
+import json
 import os, logging
 
+
+def _parse_success_check_response(response):
+    content = extract_json_content(response).strip()
+    try:
+        parsed = json.loads(content)
+    except json.JSONDecodeError:
+        try:
+            parsed = ast.literal_eval(content)
+        except (SyntaxError, ValueError):
+            normalized = (
+                content
+                .replace("true", "True")
+                .replace("false", "False")
+                .replace("null", "None")
+            )
+            parsed = ast.literal_eval(normalized)
+
+    if isinstance(parsed, dict):
+        flag = parsed.get("flag", parsed.get("success", parsed.get("passed")))
+        message = parsed.get("message", parsed.get("reason", parsed.get("advice")))
+        return bool(flag), message
+
+    flag, message = parsed
+    return bool(flag), message
 
 
 def build_success_check_2(dockerfile_path, message, build_system_name):
@@ -63,7 +89,7 @@ def build_success_check_2(dockerfile_path, message, build_system_name):
     response = bot.inference2()
     logger.info(f"THE RESPONSE IS:\n{response}\n")
 
-    flag, message = eval(extract_json_content(response))
+    flag, message = _parse_success_check_response(response)
     return flag, message
 
 
@@ -124,5 +150,5 @@ If the build is not successful, return ```json\n(False, <Reason and Advice>)\n``
 
     logger.info(f"THE RESPONSE IS:\n{response}\n")
 
-    flag, message = eval(extract_json_content(response))
+    flag, message = _parse_success_check_response(response)
     return flag, message
