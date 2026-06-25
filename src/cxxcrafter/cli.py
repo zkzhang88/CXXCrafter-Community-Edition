@@ -12,8 +12,9 @@ from cxxcrafter.config import MAX_RETRY_TIMES
 
 
 class CXXCrafter:
-    def __init__(self, project_path):
+    def __init__(self, project_path, force_overwrite=False):
         self.project_path = project_path
+        self.force_overwrite = force_overwrite
         self.start_time = datetime.now().strftime('%Y%m%d_%H%M')
         self.project_name = os.path.basename(project_path)
         self.dockerfile_path = os.path.join(get_playground_dir(), self.project_name, 'Dockerfile')
@@ -45,6 +46,21 @@ class CXXCrafter:
 
     def generate_dockerfile(self):
         self.logger.info('Generation Module Starts')
+        project_dir = os.path.dirname(self.dockerfile_path)
+        copied_project_dir = os.path.join(project_dir, self.project_name)
+
+        if (
+            not self.force_overwrite
+            and os.path.exists(self.dockerfile_path)
+            and os.path.isdir(copied_project_dir)
+        ):
+            self.logger.info('Existing Dockerfile and copied project found; resuming from playground')
+            self.history_dir = os.path.join(project_dir, f'history-{self.start_time}')
+            os.makedirs(self.history_dir, exist_ok=True)
+            log_the_dockerfile(self.dockerfile_path, self.flag_version, self.history_dir)
+            self.logger.info('Generation Module Finishes')
+            return
+
         dockerfile_generator = DockerfileGenerator(
             self.project_name, self.project_path, 
             self.environment_requirement, self.potential_dependency, 
@@ -54,8 +70,8 @@ class CXXCrafter:
         self.logger.info('Generation Module Finishes')
 
         # Create a directory to store the history
-        self.history_dir = os.path.join(os.path.dirname(self.dockerfile_path), f'history-{self.start_time}')
-        os.makedirs(self.history_dir)
+        self.history_dir = os.path.join(project_dir, f'history-{self.start_time}')
+        os.makedirs(self.history_dir, exist_ok=True)
         log_the_dockerfile(self.dockerfile_path, self.flag_version, self.history_dir)
     
     

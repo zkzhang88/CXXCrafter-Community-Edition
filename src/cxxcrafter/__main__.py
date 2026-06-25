@@ -8,10 +8,14 @@ if __name__ == "__main__":
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('--repo', type=str, help='Specify the path of a single repo to build.')
     group.add_argument('--repo-list', type=str, help='Specify the path of a repo list file.')
+    parser.add_argument(
+        '--force-overwrite',
+        action='store_true',
+        help='Regenerate and overwrite an existing playground Dockerfile instead of resuming it.',
+    )
     args = parser.parse_args()
 
     if args.repo:
-        build_one_repo(args.repo)
+        build_one_repo(args.repo, force_overwrite=args.force_overwrite)
     elif args.repo_list:
-        run_with_file_list(args.repo_list)
-
+        run_with_file_list(args.repo_list, force_overwrite=args.force_overwrite)
