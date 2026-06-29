@@ -98,6 +98,7 @@ class DockerfileModifier:
                 web_search_results,
             ])
         return "\n".join(prompt_parts)
+    
     def modify_dockerfile(self, dockerfile_path, error_message, web_search_results=""):
         """
         """
