@@ -6,18 +6,26 @@ from cxxcrafter.init import get_playground_dir
 
 
 class DockerfileGenerator:
-    def __init__(self, project_name, project_path, environment_requirement, dependency, docs):
+    def __init__(self, project_name, project_path, environment_requirement, dependency, docs, web_search_results=""):
         self.project_name = project_name
         self.project_path = project_path
         self.environment_requirement = environment_requirement
         self.dependency = dependency
         self.docs = docs
+        self.web_search_results = web_search_results
         self.logger = logging.getLogger(__name__)
         self.logger.disabled = False
-    
+
     def generate_system_prompt(self):
         self.logger.info('Generating system prompt...')
-        return get_initial_prompt(self.project_name, self.project_path, self.environment_requirement, self.dependency, self.docs)
+        return get_initial_prompt(
+            self.project_name,
+            self.project_path,
+            self.environment_requirement,
+            self.dependency,
+            self.docs,
+            self.web_search_results,
+        )
 
     def perform_inference(self, system_prompt):
         self.logger.info('Performing inference...')
@@ -71,18 +79,30 @@ class DockerfileModifier:
         self.logger.info('Begin to modify the dockerfile')
         self.bot = GPTBot(prompt_template_for_modification)
 
-    def generate_prompt(self, dockerfile_path, error_message):
-        dockerfile_content = open(dockerfile_path, "r").read()
-        return dockerfile_content
-
-    
-    def modify_dockerfile(self, dockerfile_path, error_message):
+    def generate_prompt(self, dockerfile_path, error_message, web_search_results=""):
+        with open(dockerfile_path, "r") as f:
+            dockerfile_content = f.read()
+        prompt_parts = [
+            "Current Dockerfile:",
+            "```dockerfile",
+            dockerfile_content,
+            "```",
+            "Error Message:",
+            "```text",
+            str(error_message),
+            "```",
+        ]
+        if web_search_results:
+            prompt_parts.extend([
+                "Relevant Web Search Results:",
+                web_search_results,
+            ])
+        return "\n".join(prompt_parts)
+    def modify_dockerfile(self, dockerfile_path, error_message, web_search_results=""):
         """
         """
-        dockerfile_content = self.generate_prompt(dockerfile_path, error_message)
-        response = self.bot.inference(dockerfile_content +"\n*2" +error_message)
+        dockerfile_content = self.generate_prompt(dockerfile_path, error_message, web_search_results)
+        response = self.bot.inference(dockerfile_content)
         if '```dockerfile' in response.lower():
             dockerfile_content = extract_dockerfile_content(response)
             resave_dockerfile(dockerfile_path, dockerfile_content)
-        
-    
