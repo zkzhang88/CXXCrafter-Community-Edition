@@ -19,10 +19,10 @@ from cxxcrafter.search_module import (
 
 class CXXCrafter:
     def __init__(self, project_path, force_overwrite=False):
-        self.project_path = project_path
+        self.project_path = os.path.abspath(os.path.normpath(project_path))
         self.force_overwrite = force_overwrite
         self.start_time = datetime.now().strftime('%Y%m%d_%H%M')
-        self.project_name = os.path.basename(project_path)
+        self.project_name = os.path.basename(self.project_path)
         self.dockerfile_path = os.path.join(get_playground_dir(), self.project_name, 'Dockerfile')
         self.log_file = f"{get_log_dir()}/{self.project_name}_{self.start_time}.log"
         self.history_dir = None
