@@ -1,6 +1,7 @@
 import json
 import logging
 import re
+import urllib.parse
 import urllib.request
 
 from cxxcrafter.config import (
@@ -8,6 +9,7 @@ from cxxcrafter.config import (
     SEARCH_API_URL,
     SEARCH_ENABLED,
     SEARCH_MAX_RESULTS,
+    SEARCH_PROVIDER,
     SEARCH_RETRY_TIMES,
     SEARCH_TIMEOUT_SECONDS,
 )
@@ -22,6 +24,7 @@ class SearchClient:
     def __init__(
         self,
         enabled=SEARCH_ENABLED,
+        provider=SEARCH_PROVIDER,
         api_url=SEARCH_API_URL,
         api_key=SEARCH_API_KEY,
         max_results=SEARCH_MAX_RESULTS,
@@ -30,6 +33,7 @@ class SearchClient:
         logger=None,
     ):
         self.enabled = bool(enabled)
+        self.provider = (provider or "generic").strip().lower()
         self.api_url = api_url
         self.api_key = api_key
         self.max_results = max(0, int(max_results))
@@ -66,6 +70,11 @@ class SearchClient:
         return []
 
     def _request(self, query):
+        if self.provider == "searxng":
+            return self._request_searxng(query)
+        return self._request_generic(query)
+
+    def _request_generic(self, query):
         payload = json.dumps({
             "query": query,
             "max_results": self.max_results,
@@ -83,6 +92,25 @@ class SearchClient:
             data=payload,
             headers=headers,
             method="POST",
+        )
+        with urllib.request.urlopen(request, timeout=self.timeout_seconds) as response:
+            body = response.read().decode("utf-8")
+
+        return parse_search_response(body, self.max_results)
+
+    def _request_searxng(self, query):
+        separator = "&" if "?" in self.api_url else "?"
+        params = urllib.parse.urlencode({
+            "q": query,
+            "format": "json",
+        })
+        request = urllib.request.Request(
+            f"{self.api_url}{separator}{params}",
+            headers={
+                "Accept": "application/json",
+                "X-Real-IP": "127.0.0.1",
+            },
+            method="GET",
         )
         with urllib.request.urlopen(request, timeout=self.timeout_seconds) as response:
             body = response.read().decode("utf-8")

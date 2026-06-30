@@ -14,6 +14,7 @@ CONFIG_DEFAULTS = {
     "mp_pool_size": 10,
     "max_retry_times": 10,
     "search_enabled": False,
+    "search_provider": "generic",
     "search_api_url": "",
     "search_api_key": "",
     "search_max_results": 5,
@@ -73,6 +74,11 @@ MP_POOL_SIZE = int(os.getenv("CXXCRAFTER_MP_POOL_SIZE", _config_value("mp_pool_s
 MAX_RETRY_TIMES = int(os.getenv("CXXCRAFTER_MAX_RETRY_TIMES", _config_value("max_retry_times")))
 
 SEARCH_ENABLED = _env_bool("CXXCRAFTER_SEARCH_ENABLED", bool(_config_value("search_enabled")))
+SEARCH_PROVIDER = (
+    _first_env("CXXCRAFTER_SEARCH_PROVIDER")
+    or _config_value("search_provider")
+    or "generic"
+).strip().lower()
 SEARCH_API_URL = _first_env("CXXCRAFTER_SEARCH_API_URL") or _config_value("search_api_url")
 SEARCH_API_KEY = _first_env("CXXCRAFTER_SEARCH_API_KEY") or _config_value("search_api_key")
 SEARCH_MAX_RESULTS = int(os.getenv("CXXCRAFTER_SEARCH_MAX_RESULTS", _config_value("search_max_results")))
