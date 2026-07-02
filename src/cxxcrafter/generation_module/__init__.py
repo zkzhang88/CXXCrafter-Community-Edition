@@ -1,6 +1,7 @@
 import logging, shutil, os
 from .template.prompt_template import get_initial_prompt, prompt_template_for_modification
 from .utils import save_dockerfile, resave_dockerfile, extract_dockerfile_content
+from cxxcrafter.audit import append_audit
 from cxxcrafter.llm.bot import GPTBot
 from cxxcrafter.init import get_playground_dir
 
@@ -29,6 +30,12 @@ class DockerfileGenerator:
 
     def perform_inference(self, system_prompt):
         self.logger.info('Performing inference...')
+        append_audit("dockerfile_generation_llm_prompt", {
+            "project_name": self.project_name,
+            "stage": "initial_generation",
+            "system_prompt": system_prompt,
+            "user_prompt": "",
+        })
         bot = GPTBot(system_prompt)
         return bot.inference()
 
@@ -43,9 +50,27 @@ class DockerfileGenerator:
         2. Avoid duplicating identical RUN commands.
         3. Follow proper Dockerfile syntax, such as placing comments and commands on separate lines. Comments should begin with a # and be on their own line.
         """
+        append_audit("dockerfile_generation_llm_prompt", {
+            "project_name": self.project_name,
+            "stage": "dockerfile_syntax_review",
+            "system_prompt": prompt,
+            "user_prompt": dockerfile_content,
+        })
         bot = GPTBot(prompt)
-        dockerfile_content = self.extract_dockerfile(bot.inference(dockerfile_content))
-        return dockerfile_content
+        review_response = bot.inference(dockerfile_content)
+        try:
+            return self.extract_dockerfile(review_response)
+        except ValueError as e:
+            self.logger.warning(
+                "Dockerfile syntax review did not return Dockerfile content; keeping the generated Dockerfile."
+            )
+            append_audit("dockerfile_syntax_review_fallback", {
+                "project_name": self.project_name,
+                "error": str(e),
+                "review_response": review_response,
+                "kept_dockerfile": dockerfile_content,
+            })
+            return dockerfile_content
     
     def generate_dockerfile(self):
         self.logger.info('Starting Dockerfile generation process...')
@@ -103,6 +128,12 @@ class DockerfileModifier:
         """
         """
         dockerfile_content = self.generate_prompt(dockerfile_path, error_message, web_search_results)
+        append_audit("dockerfile_repair_llm_prompt", {
+            "dockerfile_path": dockerfile_path,
+            "stage": "repair",
+            "system_prompt": prompt_template_for_modification,
+            "user_prompt": dockerfile_content,
+        })
         response = self.bot.inference(dockerfile_content)
         if '```dockerfile' in response.lower():
             dockerfile_content = extract_dockerfile_content(response)

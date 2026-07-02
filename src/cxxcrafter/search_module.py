@@ -4,6 +4,7 @@ import re
 import urllib.parse
 import urllib.request
 
+from cxxcrafter.audit import append_audit
 from cxxcrafter.config import (
     SEARCH_API_KEY,
     SEARCH_API_URL,
@@ -44,29 +45,63 @@ class SearchClient:
     def search(self, query):
         if not self.enabled:
             self.logger.info("Web search disabled.")
+            append_audit("web_search_skipped", {
+                "reason": "disabled",
+                "query": query,
+            })
             return []
         if not self.api_url:
             self.logger.warning("Web search enabled but search_api_url is not configured.")
+            append_audit("web_search_skipped", {
+                "reason": "search_api_url_not_configured",
+                "query": query,
+            })
             return []
 
         query = _compact_text(query, MAX_QUERY_LENGTH)
         if not query:
             self.logger.warning("Web search skipped because query is empty.")
+            append_audit("web_search_skipped", {
+                "reason": "empty_query",
+            })
             return []
 
         self.logger.info(f"Web search query: {query}")
+        append_audit("web_search_request", {
+            "provider": self.provider,
+            "query": query,
+            "max_results": self.max_results,
+            "retry_times": self.retry_times,
+        })
         last_error = None
         for attempt in range(self.retry_times + 1):
             try:
                 results = self._request(query)
                 self._log_results(results)
+                append_audit("web_search_results", {
+                    "provider": self.provider,
+                    "query": query,
+                    "attempt": attempt + 1,
+                    "results": results,
+                })
                 return results
             except Exception as e:
                 last_error = e
+                append_audit("web_search_attempt_failed", {
+                    "provider": self.provider,
+                    "query": query,
+                    "attempt": attempt + 1,
+                    "error": str(e),
+                })
                 if attempt < self.retry_times:
                     self.logger.warning(f"Web search attempt {attempt + 1} failed: {e}")
 
         self.logger.warning(f"Web search failed; continuing without search results: {last_error}")
+        append_audit("web_search_failed", {
+            "provider": self.provider,
+            "query": query,
+            "error": str(last_error),
+        })
         return []
 
     def _request(self, query):
