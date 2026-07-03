@@ -6,6 +6,16 @@ from cxxcrafter.llm.bot import GPTBot
 from cxxcrafter.init import get_playground_dir
 
 
+def _find_dangling_symlinks(root):
+    dangling_symlinks = []
+    for dirpath, dirnames, filenames in os.walk(root, followlinks=False):
+        for name in dirnames + filenames:
+            path = os.path.join(dirpath, name)
+            if os.path.islink(path) and not os.path.exists(path):
+                dangling_symlinks.append(os.path.relpath(path, root))
+    return dangling_symlinks
+
+
 class DockerfileGenerator:
     def __init__(self, project_name, project_path, environment_requirement, dependency, docs, web_search_results=""):
         self.project_name = project_name
@@ -88,7 +98,16 @@ class DockerfileGenerator:
 
         try:
             if not os.path.exists(temp):
-                shutil.copytree(self.project_path, temp)
+                dangling_symlinks = _find_dangling_symlinks(self.project_path)
+                if dangling_symlinks:
+                    preview = ', '.join(dangling_symlinks[:10])
+                    if len(dangling_symlinks) > 10:
+                        preview += f", ... ({len(dangling_symlinks)} total)"
+                    self.logger.warning(
+                        "Project contains dangling symlinks; preserving symlinks while copying: %s",
+                        preview,
+                    )
+                shutil.copytree(self.project_path, temp, symlinks=True)
         except Exception as e:
             self.logger.error(
                 f"Error copying the repo: {e}. Params: self.project_path: {self.project_path}; temp: {temp}")
