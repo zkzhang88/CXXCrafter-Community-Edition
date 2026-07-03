@@ -72,7 +72,8 @@ class DockerfileGenerator:
             return self.extract_dockerfile(review_response)
         except ValueError as e:
             self.logger.warning(
-                "Dockerfile syntax review did not return Dockerfile content; keeping the generated Dockerfile."
+                "Dockerfile syntax review did not return Dockerfile content; keeping the generated Dockerfile: %s",
+                e,
             )
             append_audit("dockerfile_syntax_review_fallback", {
                 "project_name": self.project_name,
