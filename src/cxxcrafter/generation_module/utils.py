@@ -9,7 +9,7 @@ def extract_dockerfile_content(text):
     if match:
         return match.group(1).strip()
     else:
-        raise "No Dockerfile content found"
+        raise ValueError("No Dockerfile content found")
     
 
 

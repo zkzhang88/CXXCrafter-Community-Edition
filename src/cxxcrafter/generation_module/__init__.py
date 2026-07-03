@@ -46,8 +46,15 @@ class DockerfileGenerator:
         3. Follow proper Dockerfile syntax, such as placing comments and commands on separate lines. Comments should begin with a # and be on their own line.
         """
         bot = GPTBot(prompt)
-        dockerfile_content = self.extract_dockerfile(bot.inference(dockerfile_content))
-        return dockerfile_content
+        review_response = bot.inference(dockerfile_content)
+        try:
+            return self.extract_dockerfile(review_response)
+        except ValueError as e:
+            self.logger.warning(
+                "Dockerfile syntax review did not return Dockerfile content; keeping the generated Dockerfile: %s",
+                e,
+            )
+            return dockerfile_content
     
     def generate_dockerfile(self):
         self.logger.info('Starting Dockerfile generation process...')
