@@ -11,7 +11,6 @@ from cxxcrafter.llm.bot import get_sdk_token_counts
 from cxxcrafter.config import MAX_RETRY_TIMES
 from cxxcrafter.search_module import (
     SearchClient,
-    build_generation_search_query,
     build_repair_search_query,
     format_search_results,
 )
@@ -77,9 +76,7 @@ class CXXCrafter:
             self.logger.info('Generation Module Finishes')
             return
 
-        web_search_results = self._get_web_search_results(
-            build_generation_search_query(self.project_name, self.build_system_name)
-        )
+        web_search_results = ""
 
         dockerfile_generator = DockerfileGenerator(
             self.project_name, self.project_path, 
