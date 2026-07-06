@@ -13,6 +13,7 @@ def parser(project_path):
     
     """
     logger = logging.getLogger(__name__)
+    project_path = os.path.abspath(os.path.normpath(project_path))
 
     if not os.path.exists(project_path):
         logger.error(f"Wrong project path: {project_path}")
@@ -27,5 +28,4 @@ def parser(project_path):
         logger.error(e)
         docs = ""
     return project_name, project_path, environment_requirement, build_system_name, entry_file, dependencies, docs
-
 

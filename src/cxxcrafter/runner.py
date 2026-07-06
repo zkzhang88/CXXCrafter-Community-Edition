@@ -14,7 +14,7 @@ def build_one_repo(repo_path, force_overwrite=False):
 def run_with_file_list(file_path, force_overwrite=False):
     with open(file_path, "r") as f:
         lines = f.readlines()
-    repos = [line.strip() for line in lines if line.strip()]
+    repos = [os.path.abspath(os.path.normpath(line.strip())) for line in lines if line.strip()]
     built_repos = os.listdir(get_solution_base_dir())
     repos = [item for item in repos if os.path.basename(item) not in built_repos]
     pool_size = MP_POOL_SIZE if isinstance(MP_POOL_SIZE, int) else 10

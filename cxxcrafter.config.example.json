@@ -5,5 +5,12 @@
   "deepseek_thinking_enabled": true,
   "deepseek_reasoning_effort": "high",
   "mp_pool_size": 10,
-  "max_retry_times": 20
+  "max_retry_times": 20,
+  "search_enabled": false,
+  "search_provider": "generic",
+  "search_api_url": "",
+  "search_api_key": "",
+  "search_max_results": 5,
+  "search_timeout_seconds": 10,
+  "search_retry_times": 0
 }
