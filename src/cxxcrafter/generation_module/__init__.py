@@ -1,5 +1,6 @@
 import logging, shutil, os
-from .template.prompt_template import get_initial_prompt, prompt_template_for_modification
+import re
+from .template.prompt_template import get_initial_prompt, get_modification_prompt
 from .utils import save_dockerfile, resave_dockerfile, extract_dockerfile_content
 from cxxcrafter.audit import append_audit
 from cxxcrafter.llm.bot import GPTBot
@@ -16,14 +17,37 @@ def _find_dangling_symlinks(root):
     return dangling_symlinks
 
 
+def ensure_boost_test_library(dockerfile_content):
+    pattern = re.compile(r"(--with-libraries=)(['\"]?)([A-Za-z0-9_,+-]+)(\2)")
+
+    def replace(match):
+        libraries = match.group(3).split(",")
+        if "test" not in libraries:
+            libraries.append("test")
+        return f"{match.group(1)}{match.group(2)}{','.join(libraries)}{match.group(4)}"
+
+    return pattern.sub(replace, dockerfile_content)
+
+
+def postprocess_test_ready_dockerfile(dockerfile_content):
+    if (
+        "boost" in dockerfile_content.lower()
+        and "./bootstrap.sh" in dockerfile_content
+        and "--with-libraries=" in dockerfile_content
+    ):
+        dockerfile_content = ensure_boost_test_library(dockerfile_content)
+    return dockerfile_content
+
+
 class DockerfileGenerator:
-    def __init__(self, project_name, project_path, environment_requirement, dependency, docs, web_search_results=""):
+    def __init__(self, project_name, project_path, environment_requirement, dependency, docs, web_search_results="", test_ready=False):
         self.project_name = project_name
         self.project_path = project_path
         self.environment_requirement = environment_requirement
         self.dependency = dependency
         self.docs = docs
         self.web_search_results = web_search_results
+        self.test_ready = test_ready
         self.logger = logging.getLogger(__name__)
         self.logger.disabled = False
 
@@ -36,6 +60,7 @@ class DockerfileGenerator:
             self.dependency,
             self.docs,
             self.web_search_results,
+            test_ready=self.test_ready,
         )
 
     def perform_inference(self, system_prompt):
@@ -59,6 +84,10 @@ class DockerfileGenerator:
         1. Each install command should be executed individually.
         2. Avoid duplicating identical RUN commands.
         3. Follow proper Dockerfile syntax, such as placing comments and commands on separate lines. Comments should begin with a # and be on their own line.
+        """
+        if self.test_ready:
+            prompt += """
+        4. Preserve test-ready behavior: do not remove test dependencies or disable test targets/modules that are needed to build local tests.
         """
         append_audit("dockerfile_generation_llm_prompt", {
             "project_name": self.project_name,
@@ -89,6 +118,8 @@ class DockerfileGenerator:
         response = self.perform_inference(system_prompt)
         dockerfile_content = self.extract_dockerfile(response)
         dockerfile_content = self.check_dockerfile(dockerfile_content)
+        if self.test_ready:
+            dockerfile_content = postprocess_test_ready_dockerfile(dockerfile_content)
 
         # Create dockerfile playground directory
         project_dir = os.path.join(get_playground_dir(), self.project_name)
@@ -119,10 +150,12 @@ class DockerfileGenerator:
     
 
 class DockerfileModifier:
-    def __init__(self):
+    def __init__(self, test_ready=False):
         self.logger = logging.getLogger(__name__)
         self.logger.info('Begin to modify the dockerfile')
-        self.bot = GPTBot(prompt_template_for_modification)
+        self.test_ready = test_ready
+        self.system_prompt = get_modification_prompt(test_ready)
+        self.bot = GPTBot(self.system_prompt)
 
     def generate_prompt(self, dockerfile_path, error_message, web_search_results=""):
         with open(dockerfile_path, "r") as f:
@@ -151,10 +184,12 @@ class DockerfileModifier:
         append_audit("dockerfile_repair_llm_prompt", {
             "dockerfile_path": dockerfile_path,
             "stage": "repair",
-            "system_prompt": prompt_template_for_modification,
+            "system_prompt": self.system_prompt,
             "user_prompt": dockerfile_content,
         })
         response = self.bot.inference(dockerfile_content)
         if '```dockerfile' in response.lower():
             dockerfile_content = extract_dockerfile_content(response)
+            if self.test_ready:
+                dockerfile_content = postprocess_test_ready_dockerfile(dockerfile_content)
             resave_dockerfile(dockerfile_path, dockerfile_content)

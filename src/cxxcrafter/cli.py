@@ -17,16 +17,17 @@ from cxxcrafter.search_module import (
 
 
 class CXXCrafter:
-    def __init__(self, project_path, force_overwrite=False):
+    def __init__(self, project_path, force_overwrite=False, test_ready=False):
         self.project_path = os.path.abspath(os.path.normpath(project_path))
         self.force_overwrite = force_overwrite
+        self.test_ready = test_ready
         self.start_time = datetime.now().strftime('%Y%m%d_%H%M')
         self.project_name = os.path.basename(self.project_path)
         self.dockerfile_path = os.path.join(get_playground_dir(), self.project_name, 'Dockerfile')
         self.log_file = f"{get_log_dir()}/{self.project_name}_{self.start_time}.log"
         self.history_dir = None
         self.flag_version = 1
-        self.modifier = DockerfileModifier()
+        self.modifier = DockerfileModifier(test_ready=self.test_ready)
 
         setup_logging(self.log_file, self.project_name)
         self.logger = logging.getLogger(__name__)
@@ -81,7 +82,7 @@ class CXXCrafter:
         dockerfile_generator = DockerfileGenerator(
             self.project_name, self.project_path, 
             self.environment_requirement, self.potential_dependency, 
-            self.docs, web_search_results)
+            self.docs, web_search_results, test_ready=self.test_ready)
         
         dockerfile_generator.generate_dockerfile()
         self.logger.info('Generation Module Finishes')
@@ -106,7 +107,11 @@ class CXXCrafter:
 
     def execute_dockerfile(self):
         self.logger.info('Execution Module Starts')
-        flag, error = executor(os.path.dirname(self.dockerfile_path), build_system_name=self.build_system_name)
+        flag, error = executor(
+            os.path.dirname(self.dockerfile_path),
+            build_system_name=self.build_system_name,
+            test_ready=self.test_ready,
+        )
         self.logger.info('Execution Module Finishes')
         return flag, error
 

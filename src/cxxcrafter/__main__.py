@@ -13,9 +13,14 @@ if __name__ == "__main__":
         action='store_true',
         help='Regenerate and overwrite an existing playground Dockerfile instead of resuming it.',
     )
+    parser.add_argument(
+        '--test-ready',
+        action='store_true',
+        help='Generate a Dockerfile that also preserves and builds local test targets/dependencies.',
+    )
     args = parser.parse_args()
 
     if args.repo:
-        build_one_repo(args.repo, force_overwrite=args.force_overwrite)
+        build_one_repo(args.repo, force_overwrite=args.force_overwrite, test_ready=args.test_ready)
     elif args.repo_list:
-        run_with_file_list(args.repo_list, force_overwrite=args.force_overwrite)
+        run_with_file_list(args.repo_list, force_overwrite=args.force_overwrite, test_ready=args.test_ready)
