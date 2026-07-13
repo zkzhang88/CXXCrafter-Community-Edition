@@ -18,9 +18,27 @@ if __name__ == "__main__":
         action='store_true',
         help='Generate a Dockerfile that also preserves and builds local test targets/dependencies.',
     )
+    parser.add_argument(
+        '--search-query-count',
+        type=int,
+        choices=range(1, 6),
+        default=None,
+        metavar='{1,2,3,4,5}',
+        help='Set the total number of web search queries per failed build.',
+    )
     args = parser.parse_args()
 
     if args.repo:
-        build_one_repo(args.repo, force_overwrite=args.force_overwrite, test_ready=args.test_ready)
+        build_one_repo(
+            args.repo,
+            force_overwrite=args.force_overwrite,
+            test_ready=args.test_ready,
+            search_query_count=args.search_query_count,
+        )
     elif args.repo_list:
-        run_with_file_list(args.repo_list, force_overwrite=args.force_overwrite, test_ready=args.test_ready)
+        run_with_file_list(
+            args.repo_list,
+            force_overwrite=args.force_overwrite,
+            test_ready=args.test_ready,
+            search_query_count=args.search_query_count,
+        )

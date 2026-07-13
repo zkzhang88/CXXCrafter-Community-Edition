@@ -11,6 +11,11 @@
   "search_api_url": "",
   "search_api_key": "",
   "search_max_results": 5,
+  "search_candidate_results": 15,
+  "search_query_count": 3,
+  "search_official_domains": [],
+  "search_source_weights": {},
+  "search_blocked_domains": [],
   "search_timeout_seconds": 10,
   "search_retry_times": 0
 }

@@ -18,6 +18,11 @@ CONFIG_DEFAULTS = {
     "search_api_url": "",
     "search_api_key": "",
     "search_max_results": 5,
+    "search_candidate_results": 15,
+    "search_query_count": 3,
+    "search_official_domains": [],
+    "search_source_weights": {},
+    "search_blocked_domains": [],
     "search_timeout_seconds": 10,
     "search_retry_times": 0,
 }
@@ -55,6 +60,32 @@ def _config_value(name):
     return FILE_CONFIG.get(name, CONFIG_DEFAULTS[name])
 
 
+def _list_value(name, env_name):
+    value = os.getenv(env_name)
+    if value is not None:
+        return [item.strip() for item in value.split(",") if item.strip()]
+
+    value = _config_value(name)
+    if not isinstance(value, list):
+        raise ValueError(f"'{name}' must be a JSON list.")
+    return [str(item).strip() for item in value if str(item).strip()]
+
+
+def _dict_value(name, env_name):
+    value = os.getenv(env_name)
+    if value is not None:
+        try:
+            value = json.loads(value)
+        except json.JSONDecodeError as e:
+            raise ValueError(f"{env_name} must be a JSON object.") from e
+    else:
+        value = _config_value(name)
+
+    if not isinstance(value, dict):
+        raise ValueError(f"'{name}' must be a JSON object.")
+    return dict(value)
+
+
 FILE_CONFIG = _load_file_config()
 
 # Environment variables have the highest priority, followed by the external
@@ -82,6 +113,26 @@ SEARCH_PROVIDER = (
 SEARCH_API_URL = _first_env("CXXCRAFTER_SEARCH_API_URL") or _config_value("search_api_url")
 SEARCH_API_KEY = _first_env("CXXCRAFTER_SEARCH_API_KEY") or _config_value("search_api_key")
 SEARCH_MAX_RESULTS = int(os.getenv("CXXCRAFTER_SEARCH_MAX_RESULTS", _config_value("search_max_results")))
+SEARCH_CANDIDATE_RESULTS = int(os.getenv(
+    "CXXCRAFTER_SEARCH_CANDIDATE_RESULTS",
+    _config_value("search_candidate_results"),
+))
+SEARCH_QUERY_COUNT = int(os.getenv(
+    "CXXCRAFTER_SEARCH_QUERY_COUNT",
+    _config_value("search_query_count"),
+))
+SEARCH_OFFICIAL_DOMAINS = tuple(_list_value(
+    "search_official_domains",
+    "CXXCRAFTER_SEARCH_OFFICIAL_DOMAINS",
+))
+SEARCH_BLOCKED_DOMAINS = tuple(_list_value(
+    "search_blocked_domains",
+    "CXXCRAFTER_SEARCH_BLOCKED_DOMAINS",
+))
+SEARCH_SOURCE_WEIGHTS = _dict_value(
+    "search_source_weights",
+    "CXXCRAFTER_SEARCH_SOURCE_WEIGHTS",
+)
 SEARCH_TIMEOUT_SECONDS = int(os.getenv(
     "CXXCRAFTER_SEARCH_TIMEOUT_SECONDS",
     _config_value("search_timeout_seconds"),
@@ -90,6 +141,15 @@ SEARCH_RETRY_TIMES = int(os.getenv("CXXCRAFTER_SEARCH_RETRY_TIMES", _config_valu
 
 if MAX_RETRY_TIMES < 1:
     raise ValueError("max_retry_times must be greater than 0.")
+if not 1 <= SEARCH_QUERY_COUNT <= 5:
+    raise ValueError("search_query_count must be between 1 and 5.")
+if SEARCH_CANDIDATE_RESULTS < 1:
+    raise ValueError("search_candidate_results must be greater than 0.")
+for source_type, weight in SEARCH_SOURCE_WEIGHTS.items():
+    if isinstance(weight, bool) or not isinstance(weight, (int, float)):
+        raise ValueError(f"Search source weight '{source_type}' must be numeric.")
+    if not -20 <= weight <= 20:
+        raise ValueError(f"Search source weight '{source_type}' must be between -20 and 20.")
 
 
 # === Automatic Check ===

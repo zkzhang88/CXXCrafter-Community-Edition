@@ -8,21 +8,35 @@ from cxxcrafter.parsing_module import parser
 from cxxcrafter.execution_module import executor
 from cxxcrafter.init import get_log_dir, get_playground_dir, get_solution_base_dir
 from cxxcrafter.llm.bot import get_sdk_token_counts
-from cxxcrafter.config import MAX_RETRY_TIMES
+from cxxcrafter.config import MAX_RETRY_TIMES, SEARCH_QUERY_COUNT
 from cxxcrafter.search_module import (
     SearchClient,
-    build_repair_search_query,
+    SearchContext,
+    build_repair_search_queries,
+    build_search_context,
     format_search_results,
 )
 
 
 class CXXCrafter:
-    def __init__(self, project_path, force_overwrite=False, test_ready=False):
+    def __init__(
+        self,
+        project_path,
+        force_overwrite=False,
+        test_ready=False,
+        search_query_count=None,
+    ):
         self.project_path = os.path.abspath(os.path.normpath(project_path))
+        self.project_name = os.path.basename(self.project_path)
+        self.logger = logging.getLogger(__name__)
         self.force_overwrite = force_overwrite
         self.test_ready = test_ready
+        self.search_query_count = (
+            SEARCH_QUERY_COUNT if search_query_count is None else int(search_query_count)
+        )
+        if not 1 <= self.search_query_count <= 5:
+            raise ValueError("search_query_count must be between 1 and 5.")
         self.start_time = datetime.now().strftime('%Y%m%d_%H%M')
-        self.project_name = os.path.basename(self.project_path)
         self.dockerfile_path = os.path.join(get_playground_dir(), self.project_name, 'Dockerfile')
         self.log_file = f"{get_log_dir()}/{self.project_name}_{self.start_time}.log"
         self.history_dir = None
@@ -30,7 +44,6 @@ class CXXCrafter:
         self.modifier = DockerfileModifier(test_ready=self.test_ready)
 
         setup_logging(self.log_file, self.project_name)
-        self.logger = logging.getLogger(__name__)
         self.logger.disabled = False
 
     def __del__(self):
@@ -50,11 +63,29 @@ class CXXCrafter:
         self.docs) = parser(self.project_path)
         self.logger.info('Parsing Module Finishes')
 
-    def _get_web_search_results(self, query):
+    def _get_web_search_results(self, error_message):
         try:
             search_client = SearchClient(logger=self.logger)
             self.logger.info(f"Web search enabled: {search_client.enabled}")
-            results = search_client.search(query)
+            if not search_client.enabled or not search_client.api_url:
+                context = SearchContext(
+                    project_name=self.project_name,
+                    build_system_name=self.build_system_name,
+                )
+                search_client.search_many([], context)
+                return ""
+
+            context = build_search_context(
+                self.project_name,
+                self.project_path,
+                self.build_system_name,
+                error_message,
+            )
+            queries = build_repair_search_queries(
+                context,
+                self.search_query_count,
+            )
+            results = search_client.search_many(queries, context)
             return format_search_results(results)
         except Exception as e:
             self.logger.warning(f"Web search failed unexpectedly; continuing without search results: {e}")
@@ -95,9 +126,7 @@ class CXXCrafter:
     
     def modify_dockerfile(self, error_message):
         self.logger.info('Modifier Module Starts')
-        web_search_results = self._get_web_search_results(
-            build_repair_search_query(self.project_name, self.build_system_name, error_message)
-        )
+        web_search_results = self._get_web_search_results(error_message)
         self.modifier.modify_dockerfile(self.dockerfile_path, error_message, web_search_results)
         self.logger.info('Modifier Module Finishes')
 

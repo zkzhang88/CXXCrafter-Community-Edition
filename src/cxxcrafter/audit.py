@@ -1,6 +1,10 @@
 import json
 import os
+import threading
 from datetime import datetime
+
+
+_AUDIT_LOCK = threading.Lock()
 
 
 def append_audit(event, payload):
@@ -13,7 +17,8 @@ def append_audit(event, payload):
         os.makedirs(log_dir, exist_ok=True)
 
     timestamp = datetime.now().isoformat()
-    with open(audit_log, "a", encoding="utf-8") as f:
-        f.write(f"\n===== CXXCRAFTER_AUDIT {timestamp} {event} =====\n")
-        f.write(json.dumps(payload, ensure_ascii=False, indent=2, default=str))
-        f.write("\n")
+    with _AUDIT_LOCK:
+        with open(audit_log, "a", encoding="utf-8") as f:
+            f.write(f"\n===== CXXCRAFTER_AUDIT {timestamp} {event} =====\n")
+            f.write(json.dumps(payload, ensure_ascii=False, indent=2, default=str))
+            f.write("\n")
