@@ -25,6 +25,9 @@ CONFIG_DEFAULTS = {
     "search_blocked_domains": [],
     "search_timeout_seconds": 10,
     "search_retry_times": 0,
+    "dependency_registry_enabled": True,
+    "dependency_registry_path": "",
+    "dependency_registry_result_limit": 3,
 }
 
 
@@ -139,12 +142,28 @@ SEARCH_TIMEOUT_SECONDS = int(os.getenv(
 ))
 SEARCH_RETRY_TIMES = int(os.getenv("CXXCRAFTER_SEARCH_RETRY_TIMES", _config_value("search_retry_times")))
 
+DEPENDENCY_REGISTRY_ENABLED = _env_bool(
+    "CXXCRAFTER_DEPENDENCY_REGISTRY_ENABLED",
+    bool(_config_value("dependency_registry_enabled")),
+)
+DEPENDENCY_REGISTRY_PATH = os.path.expanduser(
+    _first_env("CXXCRAFTER_DEPENDENCY_REGISTRY_PATH")
+    or _config_value("dependency_registry_path")
+    or "~/.cxxcrafter/dependency_registry.sqlite3"
+)
+DEPENDENCY_REGISTRY_RESULT_LIMIT = int(os.getenv(
+    "CXXCRAFTER_DEPENDENCY_REGISTRY_RESULT_LIMIT",
+    _config_value("dependency_registry_result_limit"),
+))
+
 if MAX_RETRY_TIMES < 1:
     raise ValueError("max_retry_times must be greater than 0.")
 if not 1 <= SEARCH_QUERY_COUNT <= 5:
     raise ValueError("search_query_count must be between 1 and 5.")
 if SEARCH_CANDIDATE_RESULTS < 1:
     raise ValueError("search_candidate_results must be greater than 0.")
+if not 1 <= DEPENDENCY_REGISTRY_RESULT_LIMIT <= 10:
+    raise ValueError("dependency_registry_result_limit must be between 1 and 10.")
 for source_type, weight in SEARCH_SOURCE_WEIGHTS.items():
     if isinstance(weight, bool) or not isinstance(weight, (int, float)):
         raise ValueError(f"Search source weight '{source_type}' must be numeric.")

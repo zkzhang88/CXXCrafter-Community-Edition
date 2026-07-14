@@ -103,6 +103,38 @@ class GenerationSearchPromptTests(unittest.TestCase):
         self.assertIn("Relevant Web Search Results:", prompt)
         self.assertIn("Install zlib1g-dev", prompt)
 
+    def test_generation_and_repair_prompts_include_verified_dependency_solutions(self):
+        verified = (
+            "Verified Dependency Solutions:\n"
+            "1. Dependency query: zlib\n"
+            "```dockerfile\nRUN apt-get install -y zlib1g-dev\n```"
+        )
+        initial_prompt = get_initial_prompt(
+            "demo",
+            "/tmp/demo",
+            "Ubuntu 22.04",
+            {"zlib": ""},
+            "Use cmake.",
+            dependency_solutions=verified,
+        )
+        self.assertIn("Verified Dependency Solutions:", initial_prompt)
+        self.assertIn("Treat mutable or environment-fallback solutions as candidates", initial_prompt)
+
+        with tempfile.NamedTemporaryFile("w", delete=False) as dockerfile:
+            dockerfile.write("FROM ubuntu:22.04\n")
+            dockerfile_path = dockerfile.name
+        try:
+            modifier = DockerfileModifier.__new__(DockerfileModifier)
+            repair_prompt = modifier.generate_prompt(
+                dockerfile_path,
+                "fatal error: zlib.h",
+                dependency_solutions=verified,
+            )
+        finally:
+            os.unlink(dockerfile_path)
+        self.assertIn("Relevant Verified Dependency Solutions:", repair_prompt)
+        self.assertIn("RUN apt-get install -y zlib1g-dev", repair_prompt)
+
     def test_modifier_prompt_includes_test_ready_requirements_when_enabled(self):
         modifier = DockerfileModifier.__new__(DockerfileModifier)
         DockerfileModifier.__init__(modifier, test_ready=True)

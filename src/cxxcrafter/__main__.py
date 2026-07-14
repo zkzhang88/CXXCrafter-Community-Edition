@@ -1,9 +1,15 @@
 import argparse
-
-from cxxcrafter.runner import build_one_repo, run_with_file_list
+import sys
 
 
 if __name__ == "__main__":
+    if len(sys.argv) > 1 and sys.argv[1] == "dependency":
+        from cxxcrafter.memory_module.dependency_cli import run_dependency_cli
+
+        raise SystemExit(run_dependency_cli(sys.argv[2:]))
+
+    from cxxcrafter.runner import build_one_repo, run_with_file_list
+
     parser = argparse.ArgumentParser(description="CXXCrafter-Community Runner")
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('--repo', type=str, help='Specify the path of a single repo to build.')

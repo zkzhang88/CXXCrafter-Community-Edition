@@ -40,13 +40,24 @@ def postprocess_test_ready_dockerfile(dockerfile_content):
 
 
 class DockerfileGenerator:
-    def __init__(self, project_name, project_path, environment_requirement, dependency, docs, web_search_results="", test_ready=False):
+    def __init__(
+        self,
+        project_name,
+        project_path,
+        environment_requirement,
+        dependency,
+        docs,
+        web_search_results="",
+        test_ready=False,
+        dependency_solutions="",
+    ):
         self.project_name = project_name
         self.project_path = project_path
         self.environment_requirement = environment_requirement
         self.dependency = dependency
         self.docs = docs
         self.web_search_results = web_search_results
+        self.dependency_solutions = dependency_solutions
         self.test_ready = test_ready
         self.logger = logging.getLogger(__name__)
         self.logger.disabled = False
@@ -61,6 +72,7 @@ class DockerfileGenerator:
             self.docs,
             self.web_search_results,
             test_ready=self.test_ready,
+            dependency_solutions=self.dependency_solutions,
         )
 
     def perform_inference(self, system_prompt):
@@ -157,7 +169,13 @@ class DockerfileModifier:
         self.system_prompt = get_modification_prompt(test_ready)
         self.bot = GPTBot(self.system_prompt)
 
-    def generate_prompt(self, dockerfile_path, error_message, web_search_results=""):
+    def generate_prompt(
+        self,
+        dockerfile_path,
+        error_message,
+        web_search_results="",
+        dependency_solutions="",
+    ):
         with open(dockerfile_path, "r") as f:
             dockerfile_content = f.read()
         prompt_parts = [
@@ -175,12 +193,28 @@ class DockerfileModifier:
                 "Relevant Web Search Results:",
                 web_search_results,
             ])
+        if dependency_solutions:
+            prompt_parts.extend([
+                "Relevant Verified Dependency Solutions:",
+                dependency_solutions,
+            ])
         return "\n".join(prompt_parts)
     
-    def modify_dockerfile(self, dockerfile_path, error_message, web_search_results=""):
+    def modify_dockerfile(
+        self,
+        dockerfile_path,
+        error_message,
+        web_search_results="",
+        dependency_solutions="",
+    ):
         """
         """
-        dockerfile_content = self.generate_prompt(dockerfile_path, error_message, web_search_results)
+        dockerfile_content = self.generate_prompt(
+            dockerfile_path,
+            error_message,
+            web_search_results,
+            dependency_solutions,
+        )
         append_audit("dockerfile_repair_llm_prompt", {
             "dockerfile_path": dockerfile_path,
             "stage": "repair",

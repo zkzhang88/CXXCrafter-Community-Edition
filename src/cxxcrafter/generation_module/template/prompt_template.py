@@ -12,7 +12,16 @@ TEST_READY_DOCKERFILE_REQUIREMENTS = """
 
 
 
-def get_initial_prompt(project_name, user_intention, environment_requirement, dependency, docs, web_search_results="", test_ready=False):
+def get_initial_prompt(
+    project_name,
+    user_intention,
+    environment_requirement,
+    dependency,
+    docs,
+    web_search_results="",
+    test_ready=False,
+    dependency_solutions="",
+):
     """
     Get the initial prompt.
     """
@@ -27,6 +36,13 @@ def get_initial_prompt(project_name, user_intention, environment_requirement, de
             {web_search_results}
             Use the web search results only when they are relevant to this build.
             Do not invent links, package versions, or commands that are not supported by the project context or search results.
+        """
+    dependency_solution_section = ""
+    if dependency_solutions:
+        dependency_solution_section = f"""
+            {dependency_solutions}
+            Prefer an exact environment match. Treat mutable or environment-fallback solutions as candidates only.
+            These snippets were observed in successful builds, but must still be checked against this project's requirements.
         """
     test_ready_section = TEST_READY_DOCKERFILE_REQUIREMENTS if test_ready else ""
 
@@ -43,6 +59,7 @@ def get_initial_prompt(project_name, user_intention, environment_requirement, de
             Environment requirement: {environment_requirement}
             Docs: {docs}
             Potential Dependencies (skip installation if useless): {potential_dependency}
+            {dependency_solution_section}
             {web_search_section}
     """
     return prompt_template
@@ -63,7 +80,8 @@ prompt_template_for_modification = """
     7. In case errors arise due to specific dependency versions, attempt to acquire and install the exact version of the software that is required.
     8. If a 404 error occurs while attempting to download a specific dependency version, verify the correctness of the download link and make any necessary corrections.
     9. Use web search results only when they are relevant. Do not invent links, package versions, or commands that are not supported by the current Dockerfile, error message, or search results.
-    10. Return the complete Dockerfile in a fenced code block whose language is dockerfile.
+    10. Prefer exact-environment verified dependency solutions when provided. Treat mutable or environment-fallback solutions as candidates, not as proof for the current environment.
+    11. Return the complete Dockerfile in a fenced code block whose language is dockerfile.
     """
 
 
@@ -79,7 +97,8 @@ prompt_template_for_test_ready_modification = """
     6. In case errors arise due to specific dependency versions, attempt to acquire and install the exact version of the software that is required.
     7. If a 404 error occurs while attempting to download a specific dependency version, verify the correctness of the download link and make any necessary corrections.
     8. Use web search results only when they are relevant. Do not invent links, package versions, or commands that are not supported by the current Dockerfile, error message, or search results.
-    9. Return the complete Dockerfile in a fenced code block whose language is dockerfile.
+    9. Prefer exact-environment verified dependency solutions when provided. Treat mutable or environment-fallback solutions as candidates, not as proof for the current environment.
+    10. Return the complete Dockerfile in a fenced code block whose language is dockerfile.
     """
 
 

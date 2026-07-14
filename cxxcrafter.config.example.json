@@ -17,5 +17,8 @@
   "search_source_weights": {},
   "search_blocked_domains": [],
   "search_timeout_seconds": 10,
-  "search_retry_times": 0
+  "search_retry_times": 0,
+  "dependency_registry_enabled": true,
+  "dependency_registry_path": "",
+  "dependency_registry_result_limit": 3
 }
